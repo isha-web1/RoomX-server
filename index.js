@@ -56,6 +56,10 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
 
+    // database and collection
+
+    const roomsCollection = client.db('roomX').collection('rooms')
+
      // auth related api
 
      app.post('/jwt', async (req, res) => {
@@ -88,6 +92,26 @@ async function run() {
           res.status(500).send(err)
         }
       })
+
+
+    // get all rooms from db
+
+    app.get('/rooms', async (req,res) => {
+      const result = await roomsCollection.find().toArray()
+      res.send(result)
+    })
+
+    // get a single room from db
+
+    app.get('/room/:id', async (req,res) => {
+      const id = req.params.id
+      const query = { _id: new ObjectId(id) }
+      const result = await roomsCollection.findOne(query)
+      res.send(result)
+    })
+
+
+    
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();
     // Send a ping to confirm a successful connection
