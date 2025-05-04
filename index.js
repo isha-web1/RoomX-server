@@ -96,10 +96,22 @@ async function run() {
 
     // get all rooms from db
 
-    app.get('/rooms', async (req,res) => {
-      const result = await roomsCollection.find().toArray()
+    app.get('/rooms', async (req, res) => {
+      const category = req.query.category
+      console.log(category)
+      let query = {}
+      if (category && category !== 'null') query = { category }
+      const result = await roomsCollection.find(query).toArray()
       res.send(result)
     })
+
+
+      // Save a room data in db
+      app.post('/room', async (req, res) => {
+        const roomData = req.body
+        const result = await roomsCollection.insertOne(roomData)
+        res.send(result)
+      })
 
     // get a single room from db
 
@@ -111,7 +123,7 @@ async function run() {
     })
 
 
-    
+
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();
     // Send a ping to confirm a successful connection
