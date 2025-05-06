@@ -61,6 +61,21 @@ async function run() {
     const roomsCollection = client.db('roomX').collection('rooms')
     const usersCollection = client.db('roomX').collection('users')
 
+
+      // verify admin middleware
+      
+      const verifyAdmin = async (req, res, next) => {
+        console.log('hello')
+        const user = req.user
+        const query = { email: user?.email }
+        const result = await usersCollection.findOne(query)
+        console.log(result?.role)
+        if (!result || result?.role !== 'admin')
+          return res.status(401).send({ message: 'unauthorized access!!' })
+  
+        next()
+      }
+
     // auth related api
 
     app.post('/jwt', async (req, res) => {
@@ -133,6 +148,20 @@ async function run() {
       const result = await usersCollection.find().toArray()
       res.send(result)
     })
+
+
+      //update a user role
+
+      app.patch('/users/update/:email', async (req, res) => {
+        const email = req.params.email
+        const user = req.body
+        const query = { email }
+        const updateDoc = {
+          $set: { ...user, timestamp: Date.now() },
+        }
+        const result = await usersCollection.updateOne(query, updateDoc)
+        res.send(result)
+      })
 
 
 
