@@ -61,6 +61,7 @@ async function run() {
 
     const roomsCollection = client.db('roomX').collection('rooms')
     const usersCollection = client.db('roomX').collection('users')
+    const bookingsCollection = client.db('roomX').collection('bookings')
 
 
       // verify admin middleware
@@ -129,7 +130,7 @@ async function run() {
 
 
         // create-payment-intent
-        
+
         app.post('/create-payment-intent', verifyToken, async (req, res) => {
           const price = req.body.price
           const priceInCent = parseFloat(price) * 100
@@ -258,6 +259,33 @@ async function run() {
       const id = req.params.id
       const query = { _id: new ObjectId(id) }
       const result = await roomsCollection.findOne(query)
+      res.send(result)
+    })
+
+
+        // Save a booking data in db
+
+        app.post('/booking', verifyToken, async (req, res) => {
+          const bookingData = req.body
+          // save room booking info
+          const result = await bookingsCollection.insertOne(bookingData)
+         
+          res.send(result)
+        })
+
+
+         // update Room Status
+
+         
+    app.patch('/room/status/:id', async (req, res) => {
+      const id = req.params.id
+      const status = req.body.status
+      // change room availability status
+      const query = { _id: new ObjectId(id) }
+      const updateDoc = {
+        $set: { booked: status },
+      }
+      const result = await roomsCollection.updateOne(query, updateDoc)
       res.send(result)
     })
 
