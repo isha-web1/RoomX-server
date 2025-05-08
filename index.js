@@ -5,6 +5,7 @@ const cors = require('cors')
 const cookieParser = require('cookie-parser')
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const jwt = require('jsonwebtoken')
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY)
 
 
 const port = process.env.PORT || 8000
@@ -63,7 +64,7 @@ async function run() {
 
 
       // verify admin middleware
-      
+
       const verifyAdmin = async (req, res, next) => {
         console.log('hello')
         const user = req.user
@@ -75,6 +76,23 @@ async function run() {
   
         next()
       }
+
+
+         // verify host middleware
+
+
+    const verifyHost = async (req, res, next) => {
+      console.log('hello')
+      const user = req.user
+      const query = { email: user?.email }
+      const result = await usersCollection.findOne(query)
+      console.log(result?.role)
+      if (!result || result?.role !== 'host') {
+        return res.status(401).send({ message: 'unauthorized access!!' })
+      }
+
+      next()
+    }
 
     // auth related api
 
@@ -108,6 +126,27 @@ async function run() {
         res.status(500).send(err)
       }
     })
+
+
+        // create-payment-intent
+        
+        app.post('/create-payment-intent', verifyToken, async (req, res) => {
+          const price = req.body.price
+          const priceInCent = parseFloat(price) * 100
+          if (!price || priceInCent < 1) return
+          // generate clientSecret
+          const { client_secret } = await stripe.paymentIntents.create({
+            amount: priceInCent,
+            currency: 'usd',
+            // In the latest version of the API, specifying the `automatic_payment_methods` parameter is optional because Stripe enables its functionality by default.
+            automatic_payment_methods: {
+              enabled: true,
+            },
+          })
+          // send client secret as response
+          res.send({ clientSecret: client_secret })
+        })
+    
 
 
     // save a user data in db
@@ -144,7 +183,7 @@ async function run() {
 
     // get all users data from db
     
-    app.get('/users', async (req, res) => {
+    app.get('/users',verifyToken,verifyAdmin, async (req, res) => {
       const result = await usersCollection.find().toArray()
       res.send(result)
     })
@@ -187,7 +226,7 @@ async function run() {
 
 
     // Save a room data in db
-    app.post('/room', async (req, res) => {
+    app.post('/room',verifyToken,verifyHost, async (req, res) => {
       const roomData = req.body
       const result = await roomsCollection.insertOne(roomData)
       res.send(result)
@@ -195,7 +234,7 @@ async function run() {
 
 
     // get all rooms for host
-    app.get('/my-listings/:email', async (req, res) => {
+    app.get('/my-listings/:email',verifyToken,verifyHost, async (req, res) => {
       const email = req.params.email
 
       let query = { 'host.email': email }
@@ -205,7 +244,7 @@ async function run() {
 
 
     // delete a room
-    app.delete('/room/:id', async (req, res) => {
+    app.delete('/room/:id',verifyToken,verifyHost, async (req, res) => {
       const id = req.params.id
       const query = { _id: new ObjectId(id) }
       const result = await roomsCollection.deleteOne(query)
