@@ -50,7 +50,7 @@ const sendEmail = (emailAddress, emailData) => {
     }
   })
   const mailBody = {
-    from: `"StayVista" <${process.env.TRANSPORTER_EMAIL}>`, // sender address
+    from: `"roomX" <${process.env.TRANSPORTER_EMAIL}>`, // sender address
     to: emailAddress, // list of receivers
     subject: emailData.subject, // Subject line
     html: emailData.message, // html body
@@ -193,9 +193,11 @@ async function run() {
     
 
 
+  
     // save a user data in db
     app.put('/user', async (req, res) => {
       const user = req.body
+
       const query = { email: user?.email }
       // check if user already exists in db
       const isExist = await usersCollection.findOne(query)
@@ -221,9 +223,13 @@ async function run() {
         },
       }
       const result = await usersCollection.updateOne(query, updateDoc, options)
+      // welcome new user
+      sendEmail(user?.email, {
+        subject: 'Welcome to roomX!',
+        message: `Hope you will find you destination`,
+      })
       res.send(result)
     })
-
 
     // get all users data from db
     
@@ -306,15 +312,25 @@ async function run() {
     })
 
 
-        // Save a booking data in db
+         // Save a booking data in db
 
-        app.post('/booking', verifyToken, async (req, res) => {
-          const bookingData = req.body
-          // save room booking info
-          const result = await bookingsCollection.insertOne(bookingData)
-         
-          res.send(result)
-        })
+    app.post('/booking', verifyToken, async (req, res) => {
+      const bookingData = req.body
+      // save room booking info
+      const result = await bookingsCollection.insertOne(bookingData)
+      // send email to guest
+      sendEmail(bookingData?.guest?.email, {
+        subject: 'Booking Successful!',
+        message: `You've successfully booked a room through StayVista. Transaction Id: ${bookingData.transactionId}`,
+      })
+      // send email to host
+      sendEmail(bookingData?.host?.email, {
+        subject: 'Your room got booked!',
+        message: `Get ready to welcome ${bookingData.guest.name}.`,
+      })
+
+      res.send(result)
+    })
 
 
          // update Room Status
